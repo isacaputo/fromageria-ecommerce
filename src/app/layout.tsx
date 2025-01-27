@@ -4,6 +4,7 @@ import { Josefin_Sans } from "next/font/google";
 
 // Global CSS
 import "./globals.css";
+import { ThemeProvider } from "next-themes";
 
 // Fonts
 const josefinSans = Josefin_Sans({
@@ -28,7 +29,9 @@ export default function RootLayout({
       <body
         className={`${josefinSans.variable} antialiased`}
       >
-        {children}
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
