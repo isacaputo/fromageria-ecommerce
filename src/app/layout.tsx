@@ -4,7 +4,9 @@ import { Josefin_Sans } from "next/font/google";
 
 // Global CSS
 import "./globals.css";
-import { ThemeProvider } from "next-themes";
+
+// Components
+import ThemeProviderWrapper from "@/components/shared/theme-provider";
 
 // Fonts
 const josefinSans = Josefin_Sans({
@@ -25,13 +27,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="light" style={{ colorScheme: "light" }} >
+    <html lang="en" suppressHydrationWarning >
       <body
         className={`${josefinSans.variable} antialiased`}
       >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          {children}
-        </ThemeProvider>
+        <ThemeProviderWrapper>{children}</ThemeProviderWrapper>
       </body>
     </html>
   );

@@ -1,7 +1,13 @@
 "use client"
+
+// Icons from lucide-react
 import { MoonIcon, SunIcon } from "lucide-react";
-import { Button } from "../ui/button";
+
+// Components
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { Button } from "../ui/button";
+
+// Next.js
 import { useTheme } from "next-themes";
 
 export default function ThemeToggle() {
