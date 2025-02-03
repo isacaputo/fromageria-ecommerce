@@ -2,6 +2,15 @@
 import type { Metadata } from "next";
 import { Josefin_Sans } from "next/font/google";
 
+// Clerk Authentication
+import {
+  ClerkProvider,
+  SignInButton,
+  SignedIn,
+  SignedOut,
+  UserButton
+} from '@clerk/nextjs'
+
 // Global CSS
 import "./globals.css";
 
@@ -27,12 +36,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning >
-      <body
-        className={`${josefinSans.variable} antialiased`}
-      >
-        <ThemeProviderWrapper>{children}</ThemeProviderWrapper>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning >
+        <body
+          className={`${josefinSans.variable} antialiased`}
+        >
+          <ThemeProviderWrapper>{children}</ThemeProviderWrapper>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
