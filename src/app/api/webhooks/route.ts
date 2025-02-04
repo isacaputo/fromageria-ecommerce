@@ -51,6 +51,8 @@ export async function POST(req: Request) {
 
   const eventType = evt.type;
 
+  console.log("eventType", eventType);
+
   // When user is created or updated, update user in database
   if (eventType === "user.created" || eventType === "user.updated") {
     const data = JSON.parse(body).data;
@@ -82,6 +84,18 @@ export async function POST(req: Request) {
     await client.users.updateUserMetadata(data.id, {
       privateMetadata: {
         role: dbUser.role || "USER",
+      },
+    });
+  }
+
+  // When user is deleted, delete user from database
+  if (eventType === "user.deleted") {
+    const data = JSON.parse(body).data;
+    const userId = data.id;
+
+    await db.user.delete({
+      where: {
+        id: userId,
       },
     });
   }
