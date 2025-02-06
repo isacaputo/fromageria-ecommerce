@@ -1,22 +1,18 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
-import { clerkClient, WebhookEvent } from "@clerk/clerk-sdk-node";
-import { User } from "@prisma/client";
 import { db } from "@/lib/db";
+import { clerkClient, WebhookEvent } from "@clerk/nextjs/server"; // Correct import
+import { Role, User } from "@prisma/client";
 
 export async function POST(req: Request) {
   const SIGNING_SECRET = process.env.SIGNING_SECRET;
 
   if (!SIGNING_SECRET) {
-    throw new Error(
-      "Error: Please add SIGNING_SECRET from Clerk Dashboard to .env or .env.local"
-    );
+    throw new Error("Error: Please add SIGNING_SECRET to .env.local");
   }
 
-  // Create Svix webhook instance
   const wh = new Webhook(SIGNING_SECRET);
 
-  // Get request headers
   const headerPayload = await headers();
   const svix_id = headerPayload.get("svix-id");
   const svix_timestamp = headerPayload.get("svix-timestamp");
@@ -26,10 +22,8 @@ export async function POST(req: Request) {
     return new Response("Error: Missing Svix headers", { status: 400 });
   }
 
-  // Get and verify webhook payload
   const payload = await req.json();
   const body = JSON.stringify(payload);
-
   let evt: WebhookEvent;
 
   try {
@@ -46,76 +40,105 @@ export async function POST(req: Request) {
   const eventType = evt.type;
   console.log("Received event type:", eventType);
 
-  // Handle user creation and update events
   if (eventType === "user.created" || eventType === "user.updated") {
-    console.log("event type", eventType);
     const data = JSON.parse(body).data;
 
-    // Check if user exists in Clerk before proceeding
+    // Fetch existing user from DB
+    const existingUser = await db.user.findUnique({
+      where: { id: data.id },
+    });
+
+    // Get Clerk client instance
+    const clerk = await clerkClient();
+
+    // Fetch Clerk user
+    let clerkUser;
     try {
-      const existingUser = await clerkClient.users.getUser(data.id);
-      if (!existingUser) {
+      clerkUser = await clerk.users.getUser(data.id); // Correct usage of Clerk client
+    } catch (error: unknown) {
+      if (
+        error instanceof Error &&
+        (error as { status?: number }).status === 404
+      ) {
         console.warn(
-          "Skipping user.updated: User not found in Clerk, likely deleted:",
+          "User not found in Clerk, skipping metadata update for:",
           data.id
         );
-        return new Response("User not found in Clerk, skipping update.", {
+        return new Response("User not found, skipping metadata update", {
           status: 200,
         });
       }
-    } catch (err) {
-      console.warn(
-        "Skipping user.updated: Clerk user lookup failed (probably deleted):",
-        data.id
-      );
-      return new Response("User not found in Clerk, skipping update.", {
-        status: 200,
-      });
+      throw error;
     }
 
-    // Construct user data
-    const user: Partial<User> = {
+    // Ensure role exists in Clerk metadata (default to USER if missing)
+    let clerkRole = clerkUser.privateMetadata?.role as Role | undefined;
+    if (!clerkRole) {
+      clerkRole = "USER";
+      await clerk.users.updateUserMetadata(data.id, {
+        privateMetadata: { role: "USER" },
+      });
+      console.log("Set default role USER in Clerk for:", data.id);
+    }
+
+    // Construct updated user data
+    const updatedUser: Partial<User> = {
       id: data.id,
       name: `${data.first_name} ${data.last_name}`,
-      email: data.email_addresses[0].email_address,
+      email: data.email_addresses[0]?.email_address,
       picture: data.image_url,
+      role: clerkRole as Role, // Sync role from Clerk
     };
 
-    if (!user) return;
+    // Check if the user changed before updating the DB
+    if (
+      existingUser &&
+      existingUser.name === updatedUser.name &&
+      existingUser.email === updatedUser.email &&
+      existingUser.picture === updatedUser.picture &&
+      existingUser.role === updatedUser.role
+    ) {
+      console.log(
+        "No changes detected, skipping DB update for:",
+        updatedUser.id
+      );
+    } else {
+      // Update or insert the user in DB
+      const dbUser = await db.user.upsert({
+        where: { id: updatedUser.id },
+        update: updatedUser,
+        create: {
+          id: updatedUser.id!,
+          name: updatedUser.name!,
+          email: updatedUser.email!,
+          picture: updatedUser.picture!,
+          role: updatedUser.role!,
+        },
+      });
 
-    // Upsert user in database
-    const dbUser = await db.user.upsert({
-      where: { email: user.email },
-      update: user,
-      create: {
-        id: user.id!,
-        name: user.name!,
-        email: user.email!,
-        picture: user.picture!,
-        role: user.role || "USER",
-      },
-    });
+      console.log("User updated in database:", updatedUser.id);
 
-    // Update user's metadata in Clerk
-    await clerkClient.users.updateUserMetadata(data.id, {
-      privateMetadata: {
-        role: dbUser.role || "USER",
-      },
-    });
-
-    console.log("User updated in database and Clerk:", user.id);
+      // Sync Clerk role with DB role
+      if (dbUser.role !== clerkRole) {
+        await clerk.users.updateUserMetadata(data.id, {
+          privateMetadata: { role: dbUser.role },
+        });
+        console.log("Updated Clerk metadata with DB role for:", data.id);
+      } else {
+        console.log(
+          "No Clerk metadata change needed for user:",
+          updatedUser.id
+        );
+      }
+    }
   }
 
-  // Handle user deletion event
   if (eventType === "user.deleted") {
-    console.log("event type", eventType);
     const data = JSON.parse(body).data;
     const userId = data.id;
 
     try {
-      await db.user.delete({
-        where: { id: userId },
-      });
+      await db.user.delete({ where: { id: userId } });
       console.log("Deleted user from DB:", userId);
     } catch (err) {
       console.error("Error deleting user from DB:", err);
