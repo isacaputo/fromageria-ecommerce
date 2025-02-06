@@ -1,6 +1,6 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
-import { clerkClient, WebhookEvent } from "@clerk/nextjs/server";
+import { clerkClient, WebhookEvent } from "@clerk/clerk-sdk-node";
 import { User } from "@prisma/client";
 import { db } from "@/lib/db";
 
@@ -13,29 +13,25 @@ export async function POST(req: Request) {
     );
   }
 
-  // Create new Svix instance with secret
+  // Create Svix webhook instance
   const wh = new Webhook(SIGNING_SECRET);
 
-  // Get headers
+  // Get request headers
   const headerPayload = await headers();
   const svix_id = headerPayload.get("svix-id");
   const svix_timestamp = headerPayload.get("svix-timestamp");
   const svix_signature = headerPayload.get("svix-signature");
 
-  // If there are no headers, error out
   if (!svix_id || !svix_timestamp || !svix_signature) {
-    return new Response("Error: Missing Svix headers", {
-      status: 400,
-    });
+    return new Response("Error: Missing Svix headers", { status: 400 });
   }
 
-  // Get body
+  // Get and verify webhook payload
   const payload = await req.json();
   const body = JSON.stringify(payload);
 
   let evt: WebhookEvent;
 
-  // Verify payload with headers
   try {
     evt = wh.verify(body, {
       "svix-id": svix_id,
@@ -44,19 +40,40 @@ export async function POST(req: Request) {
     }) as WebhookEvent;
   } catch (err) {
     console.error("Error: Could not verify webhook:", err);
-    return new Response("Error: Verification error", {
-      status: 400,
-    });
+    return new Response("Error: Verification error", { status: 400 });
   }
 
   const eventType = evt.type;
+  console.log("Received event type:", eventType);
 
-  console.log("eventType", eventType);
-
-  // When user is created or updated, update user in database
+  // Handle user creation and update events
   if (eventType === "user.created" || eventType === "user.updated") {
+    console.log("event type", eventType);
     const data = JSON.parse(body).data;
 
+    // Check if user exists in Clerk before proceeding
+    try {
+      const existingUser = await clerkClient.users.getUser(data.id);
+      if (!existingUser) {
+        console.warn(
+          "Skipping user.updated: User not found in Clerk, likely deleted:",
+          data.id
+        );
+        return new Response("User not found in Clerk, skipping update.", {
+          status: 200,
+        });
+      }
+    } catch (err) {
+      console.warn(
+        "Skipping user.updated: Clerk user lookup failed (probably deleted):",
+        data.id
+      );
+      return new Response("User not found in Clerk, skipping update.", {
+        status: 200,
+      });
+    }
+
+    // Construct user data
     const user: Partial<User> = {
       id: data.id,
       name: `${data.first_name} ${data.last_name}`,
@@ -66,10 +83,9 @@ export async function POST(req: Request) {
 
     if (!user) return;
 
+    // Upsert user in database
     const dbUser = await db.user.upsert({
-      where: {
-        email: user.email,
-      },
+      where: { email: user.email },
       update: user,
       create: {
         id: user.id!,
@@ -80,24 +96,31 @@ export async function POST(req: Request) {
       },
     });
 
-    const client = await clerkClient();
-    await client.users.updateUserMetadata(data.id, {
+    // Update user's metadata in Clerk
+    await clerkClient.users.updateUserMetadata(data.id, {
       privateMetadata: {
         role: dbUser.role || "USER",
       },
     });
+
+    console.log("User updated in database and Clerk:", user.id);
   }
 
-  // When user is deleted, delete user from database
+  // Handle user deletion event
   if (eventType === "user.deleted") {
+    console.log("event type", eventType);
     const data = JSON.parse(body).data;
     const userId = data.id;
 
-    await db.user.delete({
-      where: {
-        id: userId,
-      },
-    });
+    try {
+      await db.user.delete({
+        where: { id: userId },
+      });
+      console.log("Deleted user from DB:", userId);
+    } catch (err) {
+      console.error("Error deleting user from DB:", err);
+      return new Response("Error deleting user from DB", { status: 500 });
+    }
   }
 
   return new Response("Webhook received", { status: 200 });
