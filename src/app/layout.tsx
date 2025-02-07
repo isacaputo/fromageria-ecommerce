@@ -5,10 +5,10 @@ import { Josefin_Sans } from "next/font/google";
 // Clerk Authentication
 import {
   ClerkProvider,
-  SignInButton,
-  SignedIn,
-  SignedOut,
-  UserButton
+  // SignInButton,
+  // SignedIn,
+  // SignedOut,
+  // UserButton
 } from '@clerk/nextjs'
 
 // Global CSS
