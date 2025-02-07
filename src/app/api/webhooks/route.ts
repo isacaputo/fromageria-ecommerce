@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     // Fetch Clerk user
     let clerkUser;
     try {
-      clerkUser = await clerk.users.getUser(data.id); // Correct usage of Clerk client
+      clerkUser = await clerk.users.getUser(data.id);
     } catch (error: unknown) {
       if (
         error instanceof Error &&
@@ -104,7 +104,7 @@ export async function POST(req: Request) {
       );
     } else {
       // Update or insert the user in DB
-      const dbUser = await db.user.upsert({
+      await db.user.upsert({
         where: { id: updatedUser.id },
         update: updatedUser,
         create: {
@@ -117,19 +117,6 @@ export async function POST(req: Request) {
       });
 
       console.log("User updated in database:", updatedUser.id);
-
-      // Sync Clerk role with DB role
-      if (dbUser.role !== clerkRole) {
-        await clerk.users.updateUserMetadata(data.id, {
-          privateMetadata: { role: dbUser.role },
-        });
-        console.log("Updated Clerk metadata with DB role for:", data.id);
-      } else {
-        console.log(
-          "No Clerk metadata change needed for user:",
-          updatedUser.id
-        );
-      }
     }
   }
 
@@ -138,11 +125,14 @@ export async function POST(req: Request) {
     const userId = data.id;
 
     try {
+      // Delete user from DB
       await db.user.delete({ where: { id: userId } });
       console.log("Deleted user from DB:", userId);
     } catch (err) {
-      console.error("Error deleting user from DB:", err);
-      return new Response("Error deleting user from DB", { status: 500 });
+      console.error("Error deleting user from DB or Clerk:", err);
+      return new Response("Error deleting user from DB or Clerk", {
+        status: 500,
+      });
     }
   }
 
