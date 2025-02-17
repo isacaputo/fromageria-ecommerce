@@ -1,6 +1,6 @@
 // Next.js
-import type { Metadata } from "next";
-import { Josefin_Sans } from "next/font/google";
+import type { Metadata } from 'next';
+import { Josefin_Sans } from 'next/font/google';
 
 // Clerk Authentication
 import {
@@ -9,25 +9,26 @@ import {
   // SignedIn,
   // SignedOut,
   // UserButton
-} from '@clerk/nextjs'
+} from '@clerk/nextjs';
 
 // Global CSS
-import "./globals.css";
+import './globals.css';
 
 // Components
-import ThemeProviderWrapper from "@/components/shared/theme-provider";
+import ThemeProviderWrapper from '@/components/shared/theme-provider';
 
 // Fonts
 const josefinSans = Josefin_Sans({
-  variable: "--font-josefin",
-  subsets: ["latin"],
+  variable: '--font-josefin',
+  subsets: ['latin'],
   weight: ['100', '200', '300', '400', '500', '600', '700'],
 });
 
 // Metadata
 export const metadata: Metadata = {
-  title: "Fromageria Tesilli",
-  description: "Fromageria Tesilli oferece queijos artesanais de qualidade, feitos com ingredientes selecionados e sabores únicos.",
+  title: 'Fromageria Tesilli',
+  description:
+    'Fromageria Tesilli oferece queijos artesanais de qualidade, feitos com ingredientes selecionados e sabores únicos.',
 };
 
 export default function RootLayout({
@@ -37,10 +38,8 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" suppressHydrationWarning >
-        <body
-          className={`${josefinSans.variable} antialiased`}
-        >
+      <html lang="en" suppressHydrationWarning>
+        <body className={`${josefinSans.variable} antialiased`}>
           <ThemeProviderWrapper>{children}</ThemeProviderWrapper>
         </body>
       </html>

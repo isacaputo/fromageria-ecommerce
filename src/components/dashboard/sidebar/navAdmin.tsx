@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import {
   Command,
@@ -10,14 +10,13 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from '@/components/ui/command';
 
+import { icons } from '@/constants/icons';
 
-import { icons } from "@/constants/icons";
+import { DashboardSidebarMenuInterface } from '@/lib/types';
 
-import { DashboardSidebarMenuInterface } from "@/lib/types";
-
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 export default function SidebarNavAdmin({
   menuLinks,
@@ -39,8 +38,8 @@ export default function SidebarNavAdmin({
               return (
                 <CommandItem
                   key={index}
-                  className={cn("w-full h-12 cursor-pointer mt-1", {
-                    "bg-accent text-accent-foreground": link.link === pathname,
+                  className={cn('w-full h-12 cursor-pointer mt-1', {
+                    'bg-accent text-accent-foreground': link.link === pathname,
                   })}
                 >
                   <Link

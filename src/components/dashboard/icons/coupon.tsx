@@ -4,7 +4,7 @@ export default function CouponIcon() {
       width={50}
       height={50}
       viewBox="0 0 512 512"
-      style={{ color: "currentColor" }}
+      style={{ color: 'currentColor' }}
       xmlns="http://www.w3.org/2000/svg"
       className="h-8 w-8 scale-90"
     >
