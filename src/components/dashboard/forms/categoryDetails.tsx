@@ -13,6 +13,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import ImageUpload from '../shared/image-upload';
 
 interface CategoryDetailsProps {
   data?: Category;
@@ -68,7 +69,18 @@ const CategoryDetails: FC<CategoryDetailsProps> = ({ data }) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      {/* Image Upload Component Placeholder */}
+                      <ImageUpload
+                        type='profile'
+                        value={field.value.map((image) => image.url)}
+                        onChange={(url) => field.onChange([...field.value, { url }])}
+                        onRemove={(url) =>
+                          field.onChange([
+                            ...field.value.filter(
+                              (current) => current.url !== url
+                            ),
+                          ])
+                        }
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
