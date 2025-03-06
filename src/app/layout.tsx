@@ -31,6 +31,13 @@ export const metadata: Metadata = {
     'Fromageria Tesilli oferece queijos artesanais de qualidade, feitos com ingredientes selecionados e sabores únicos.',
 };
 
+// Toast
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
+
+// Providers
+import ModalProvider from '@/providers/modal-provider';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -40,7 +47,13 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <body className={`${josefinSans.variable} antialiased`}>
-          <ThemeProviderWrapper>{children}</ThemeProviderWrapper>
+          <ThemeProviderWrapper>
+            <ModalProvider>
+              {children}
+            </ModalProvider>
+            <Toaster />
+            <SonnerToaster position='bottom-left' />
+          </ThemeProviderWrapper>
         </body>
       </html>
     </ClerkProvider>
