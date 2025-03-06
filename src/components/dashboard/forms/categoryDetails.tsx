@@ -3,6 +3,7 @@
 // Prisma model
 import { CategoryFormSchema } from '@/lib/schemas';
 import { Category } from '@prisma/client';
+
 import { FC, useEffect, useMemo } from 'react';
 import { useForm } from "react-hook-form";
 import * as z from 'zod';
@@ -14,6 +15,10 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import ImageUpload from '../shared/image-upload';
+import { upsertCategory } from '@/queries/category';
+import { v4 } from 'uuid';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 interface CategoryDetailsProps {
   data?: Category;
@@ -28,6 +33,10 @@ const CategoryDetails: FC<CategoryDetailsProps> = ({ data }) => {
     featured: data?.featured || false,
   }), [data]);
 
+  // Initializing necessary hooks
+  const { toast } = useToast(); // Hook for displaying toast messages
+  const router = useRouter(); // Hook for routing
+
   // Form hook for managing state and validation
   const form = useForm<z.infer<typeof CategoryFormSchema>>({
     mode: 'onChange',
@@ -35,6 +44,7 @@ const CategoryDetails: FC<CategoryDetailsProps> = ({ data }) => {
     defaultValues,
   });
 
+  // Loding status based on form submission
   const isLoading = form.formState.isSubmitting;
 
   // Reset form when data changes
@@ -45,7 +55,38 @@ const CategoryDetails: FC<CategoryDetailsProps> = ({ data }) => {
   }, [data, form, defaultValues]);
 
   const handleSubmit = async (values: z.infer<typeof CategoryFormSchema>) => {
-    console.log(values);
+    try {
+      const response = await upsertCategory({
+        id: data?.id ? data.id : v4(),
+        name: values.name,
+        image: values.image[0].url,
+        url: values.url,
+        featured: values.featured,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      // Displaying success message when form is submitted
+      toast({
+        title: data?.id ? 'Category has been updated' : `Congratulations! ${response?.name} has been created.`,
+      });
+
+      // Redirect or Refresh data
+      if (data?.id) {
+        router.refresh();
+      }
+      else {
+        router.push('/dashboard/admin/categories/');
+      }
+    } catch (error: unknown) {
+      // Handling form submission errors
+      console.log(error);
+      toast({
+        variant: "destructive",
+        title: "Oops!",
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    }
   };
 
   return (
