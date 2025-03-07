@@ -11,6 +11,7 @@ import {
   DialogHeader,
 } from "@/components/ui/dialog";
 import { DialogTitle } from "@radix-ui/react-dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -37,9 +38,14 @@ const CustomModal = ({
           maxWidth
         )}
       >
-        {heading && (
+        {heading ? (
           <DialogTitle className="text-2xl font-bold">{heading}</DialogTitle>
+        ) : (
+          <VisuallyHidden>
+            <DialogTitle>Modal</DialogTitle>
+          </VisuallyHidden>
         )}
+
         <DialogHeader className="pt-8 text-left">
           {subheading && <DialogDescription>{subheading}</DialogDescription>}
           {children}
